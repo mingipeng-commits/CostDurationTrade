@@ -292,6 +292,37 @@ const EXAMPLES = {
     svgConfig: { W:680, H:280 },
     indirectSlope: 45,
     indirectCost: d => Math.max(0, (d - 8) * 45)
+  },
+  pinto: {
+    name: '範例 3：Pinto 2020 習題 (J–Y)',
+    description: '10 個活動、3 條路徑。若工期超過 27 天，每超過 1 天罰 $1,000（作為「間接成本」計算）。目標：找出最低總成本。',
+    activities: {
+      J: { name:'J', preds:[],           normalTime:2,  crashTime:1, normalCost:600, crashCost:1800, slope:1200,  maxCrash:1 },
+      A: { name:'A', preds:['J'],        normalTime:7,  crashTime:6, normalCost:400, crashCost:1200, slope:800,   maxCrash:1 },
+      E: { name:'E', preds:['A'],        normalTime:9,  crashTime:7, normalCost:500, crashCost:1650, slope:575,   maxCrash:2 },
+      L: { name:'L', preds:['A'],        normalTime:7,  crashTime:5, normalCost:800, crashCost:1500, slope:350,   maxCrash:2 },
+      N: { name:'N', preds:['A'],        normalTime:6,  crashTime:5, normalCost:500, crashCost:1250, slope:750,   maxCrash:1 },
+      R: { name:'R', preds:['E'],        normalTime:4,  crashTime:4, normalCost:600, crashCost:600,  slope:0,     maxCrash:0 },
+      S: { name:'S', preds:['L'],        normalTime:10, crashTime:8, normalCost:450, crashCost:1350, slope:450,   maxCrash:2 },
+      D: { name:'D', preds:['N'],        normalTime:9,  crashTime:6, normalCost:550, crashCost:2350, slope:600,   maxCrash:3 },
+      C: { name:'C', preds:['D'],        normalTime:1,  crashTime:1, normalCost:450, crashCost:450,  slope:0,     maxCrash:0 },
+      Y: { name:'Y', preds:['R','S','C'],normalTime:8,  crashTime:6, normalCost:675, crashCost:1750, slope:537.5, maxCrash:2 }
+    },
+    paths: [
+      { nodes:['J','A','E','R','Y'],     label:'J \u2192 A \u2192 E \u2192 R \u2192 Y' },
+      { nodes:['J','A','L','S','Y'],     label:'J \u2192 A \u2192 L \u2192 S \u2192 Y' },
+      { nodes:['J','A','N','D','C','Y'], label:'J \u2192 A \u2192 N \u2192 D \u2192 C \u2192 Y' }
+    ],
+    topo: ['J','A','E','L','N','R','S','D','C','Y'],
+    positions: {
+      J:{x:10, y:112}, A:{x:110,y:112},
+      E:{x:220,y:20},  L:{x:220,y:112}, N:{x:220,y:204},
+      R:{x:330,y:20},  S:{x:330,y:112}, D:{x:330,y:204},
+      C:{x:440,y:204}, Y:{x:560,y:112}
+    },
+    svgConfig: { W:680, H:280 },
+    indirectSlope: 1000,
+    indirectCost: d => Math.max(0, (d - 27) * 1000)
   }
 };
 
