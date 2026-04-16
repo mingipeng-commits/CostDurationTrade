@@ -238,33 +238,87 @@
 
 <script>
 // ============================================================
-// DATA MODEL — Correct network: F predecessors=[C,D], G predecessors=[E,F]
+// DATA MODEL — Multiple example scenarios selectable at runtime.
+// Each scenario supplies: activities, paths, topo order, SVG node
+// positions, and its own indirect-cost function & slope.
 // ============================================================
-const ACTIVITIES = {
-  A: { name:'A', preds:[],       normalTime:3,  crashTime:2, normalCost:50,  crashCost:70,  slope:20, maxCrash:1 },
-  B: { name:'B', preds:['A'],    normalTime:6,  crashTime:4, normalCost:80,  crashCost:160, slope:40, maxCrash:2 },
-  C: { name:'C', preds:['A'],    normalTime:10, crashTime:9, normalCost:60,  crashCost:90,  slope:30, maxCrash:1 },
-  D: { name:'D', preds:['A'],    normalTime:11, crashTime:7, normalCost:50,  crashCost:150, slope:25, maxCrash:4 },
-  E: { name:'E', preds:['B'],    normalTime:8,  crashTime:6, normalCost:100, crashCost:160, slope:30, maxCrash:2 },
-  F: { name:'F', preds:['C','D'],normalTime:5,  crashTime:4, normalCost:40,  crashCost:70,  slope:30, maxCrash:1 },
-  G: { name:'G', preds:['E','F'],normalTime:6,  crashTime:6, normalCost:70,  crashCost:70,  slope:0,  maxCrash:0 }
+const EXAMPLES = {
+  default: {
+    name: '範例 1：建設工程 (A–G)',
+    description: '7 個活動、3 條路徑。初始要徑為 A→D→F→G，隨著趕工可能出現多條同時為要徑的情況。',
+    activities: {
+      A: { name:'A', preds:[],       normalTime:3,  crashTime:2, normalCost:50,  crashCost:70,  slope:20, maxCrash:1 },
+      B: { name:'B', preds:['A'],    normalTime:6,  crashTime:4, normalCost:80,  crashCost:160, slope:40, maxCrash:2 },
+      C: { name:'C', preds:['A'],    normalTime:10, crashTime:9, normalCost:60,  crashCost:90,  slope:30, maxCrash:1 },
+      D: { name:'D', preds:['A'],    normalTime:11, crashTime:7, normalCost:50,  crashCost:150, slope:25, maxCrash:4 },
+      E: { name:'E', preds:['B'],    normalTime:8,  crashTime:6, normalCost:100, crashCost:160, slope:30, maxCrash:2 },
+      F: { name:'F', preds:['C','D'],normalTime:5,  crashTime:4, normalCost:40,  crashCost:70,  slope:30, maxCrash:1 },
+      G: { name:'G', preds:['E','F'],normalTime:6,  crashTime:6, normalCost:70,  crashCost:70,  slope:0,  maxCrash:0 }
+    },
+    paths: [
+      { nodes:['A','B','E','G'], label:'A \u2192 B \u2192 E \u2192 G' },
+      { nodes:['A','C','F','G'], label:'A \u2192 C \u2192 F \u2192 G' },
+      { nodes:['A','D','F','G'], label:'A \u2192 D \u2192 F \u2192 G' }
+    ],
+    topo: ['A','B','C','D','E','F','G'],
+    positions: {
+      A:{x:60,y:112}, B:{x:220,y:20}, C:{x:220,y:112}, D:{x:220,y:204},
+      E:{x:400,y:20}, F:{x:400,y:158}, G:{x:560,y:112}
+    },
+    svgConfig: { W:680, H:280 },
+    indirectSlope: 50,
+    indirectCost: d => Math.max(0, 400 - (25 - d) * 50)
+  },
+  product: {
+    name: '範例 2：產品開發 (P–U)',
+    description: '6 個活動、2 條路徑同時為要徑（並列要徑）。每次趕工必須同時覆蓋兩條路徑。',
+    activities: {
+      P: { name:'P', preds:[],       normalTime:3,  crashTime:2, normalCost:60,  crashCost:90,  slope:30, maxCrash:1 },
+      Q: { name:'Q', preds:['P'],    normalTime:5,  crashTime:3, normalCost:70,  crashCost:130, slope:30, maxCrash:2 },
+      R: { name:'R', preds:['P'],    normalTime:11, crashTime:8, normalCost:120, crashCost:210, slope:30, maxCrash:3 },
+      S: { name:'S', preds:['Q'],    normalTime:6,  crashTime:4, normalCost:80,  crashCost:140, slope:30, maxCrash:2 },
+      T: { name:'T', preds:['R','S'],normalTime:4,  crashTime:3, normalCost:50,  crashCost:90,  slope:40, maxCrash:1 },
+      U: { name:'U', preds:['T'],    normalTime:2,  crashTime:2, normalCost:30,  crashCost:30,  slope:0,  maxCrash:0 }
+    },
+    paths: [
+      { nodes:['P','Q','S','T','U'], label:'P \u2192 Q \u2192 S \u2192 T \u2192 U' },
+      { nodes:['P','R','T','U'],     label:'P \u2192 R \u2192 T \u2192 U' }
+    ],
+    topo: ['P','Q','R','S','T','U'],
+    positions: {
+      P:{x:30,y:112}, Q:{x:170,y:30}, R:{x:170,y:195},
+      S:{x:330,y:30}, T:{x:470,y:112}, U:{x:580,y:112}
+    },
+    svgConfig: { W:680, H:280 },
+    indirectSlope: 45,
+    indirectCost: d => Math.max(0, (d - 8) * 45)
+  }
 };
 
-const ALL_PATHS = [
-  { nodes:['A','B','E','G'], label:'A \u2192 B \u2192 E \u2192 G' },
-  { nodes:['A','C','F','G'], label:'A \u2192 C \u2192 F \u2192 G' },
-  { nodes:['A','D','F','G'], label:'A \u2192 D \u2192 F \u2192 G' }
-];
+// Active-scenario bindings — reassigned by loadExample().
+let ACTIVITIES, ALL_PATHS, TOPO, POSITIONS, SVG_CONFIG, INDIRECT_SLOPE, indirectCost;
 
-const TOPO = ['A','B','C','D','E','F','G'];
+function loadExample(key) {
+  const ex = EXAMPLES[key] || EXAMPLES.default;
+  ACTIVITIES = ex.activities;
+  ALL_PATHS = ex.paths;
+  TOPO = ex.topo;
+  POSITIONS = ex.positions;
+  SVG_CONFIG = ex.svgConfig;
+  INDIRECT_SLOPE = ex.indirectSlope;
+  indirectCost = ex.indirectCost;
+}
 
 // ============================================================
 // STATE
 // ============================================================
 let S = null;
 
-function initState() {
+function initState(exampleKey) {
+  const key = exampleKey || (S && S.exampleKey) || 'default';
+  loadExample(key);
   S = {
+    exampleKey: key,
     dur: {},
     crashed: {},
     directCost: 0,
@@ -285,13 +339,18 @@ function initState() {
   S.costLog = [{ duration:d, direct:S.directCost, indirect:ic, total:S.directCost+ic }];
 }
 
+function switchExample(key) {
+  if (!EXAMPLES[key] || (S && S.exampleKey === key)) return;
+  initState(key);
+  render();
+}
+
 // ============================================================
 // CALCULATIONS
 // ============================================================
 function pathDur(p) { return p.nodes.reduce((s,n) => s + S.dur[n], 0); }
 function projDur() { return Math.max(...ALL_PATHS.map(pathDur)); }
 function critPaths() { const m = projDur(); return ALL_PATHS.filter(p => pathDur(p) === m); }
-function indirectCost(d) { return Math.max(0, 400 - (25 - d) * 50); }
 function canCrash(n) { return S.crashed[n] < ACTIVITIES[n].maxCrash; }
 function remaining(n) { return ACTIVITIES[n].maxCrash - S.crashed[n]; }
 
@@ -364,8 +423,23 @@ function renderIntro() {
   const cps = critPaths();
   const ic = indirectCost(d);
   const tc = S.directCost + ic;
+  const ex = EXAMPLES[S.exampleKey];
+
+  const exButtons = Object.entries(EXAMPLES).map(([k, v]) => {
+    const active = k === S.exampleKey;
+    return `<button class="btn ${active ? 'btn-primary' : 'btn-outline'}"
+      onclick="switchExample('${k}')">${v.name}</button>`;
+  }).join('');
 
   return `
+    <div class="card">
+      <h2>📂 選擇範例情境</h2>
+      <div class="btn-group">${exButtons}</div>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px">
+        <strong>目前範例：</strong>${ex.name}<br>${ex.description}<br>
+        <span style="font-size:13px">（間接成本每天節省 $${ex.indirectSlope}）</span>
+      </p>
+    </div>
     <div class="card">
       <h2>📋 專案活動資料表</h2>
       <p style="margin-bottom:14px;color:var(--muted)">包含正常與趕工時間及成本，以及成本斜率 (Cost Slope)。</p>
@@ -649,12 +723,11 @@ function statusTable(sch) {
 // NETWORK SVG
 // ============================================================
 function networkSVG(sch, cps) {
-  const W=680, H=280, bw=90, bh=56;
-  const pos = {
-    A:{x:60,y:112}, B:{x:220,y:20}, C:{x:220,y:112}, D:{x:220,y:204},
-    E:{x:400,y:20}, F:{x:400,y:158}, G:{x:560,y:112}
-  };
-  const edges = [['A','B'],['A','C'],['A','D'],['B','E'],['C','F'],['D','F'],['E','G'],['F','G']];
+  const W = SVG_CONFIG.W, H = SVG_CONFIG.H, bw = 90, bh = 56;
+  const pos = POSITIONS;
+  // Derive edges from each activity's predecessors so any scenario renders correctly.
+  const edges = [];
+  for (const n of TOPO) for (const p of ACTIVITIES[n].preds) edges.push([p, n]);
   const critEdges = new Set();
   cps.forEach(cp => { for(let i=0;i<cp.nodes.length-1;i++) critEdges.add(cp.nodes[i]+'-'+cp.nodes[i+1]); });
   const critActs = new Set();
@@ -881,13 +954,13 @@ function findOptimum() {
 // ============================================================
 // OPTIMAL SOLVER — two modes depending on showIndirect
 //   mode='duration': crash as cheaply as possible each round (no stop limit)
-//   mode='total':    stop when marginal crash cost > indirect saving ($50/day)
+//   mode='total':    stop when marginal crash cost > indirect saving (per-example)
 // ============================================================
 function solveOptimal(mode) {
   const dur = {}, crashed = {};
   for (const n of TOPO) { dur[n] = ACTIVITIES[n].normalTime; crashed[n] = 0; }
   let dc = Object.values(ACTIVITIES).reduce((s,a) => s + a.normalCost, 0);
-  const indirectPerDay = 50;
+  const indirectPerDay = INDIRECT_SLOPE;
 
   function simPathDur(p) { return p.nodes.reduce((s,n) => s + dur[n], 0); }
   function simProjDur() { return Math.max(...ALL_PATHS.map(simPathDur)); }
@@ -1116,12 +1189,12 @@ function renderComparisonTotal() {
       html += `<div class="msg msg-error">
         <strong>⚠️ 您在第 ${roundNum} 回合前停止了趕工。</strong><br>
         最佳解會繼續第 ${roundNum} 回合：趕工 <strong>${os.acts.join(' + ')}</strong>（成本 $${os.rc}），
-        因為趕工成本 $${os.rc} 仍小於間接成本每天節省的 $50，總成本仍會下降。
+        因為趕工成本 $${os.rc} 仍小於間接成本每天節省的 $${INDIRECT_SLOPE}，總成本仍會下降。
       </div>`;
     } else if (us && !os) {
       html += `<div class="msg msg-error">
         <strong>⚠️ 您在第 ${roundNum} 回合多做了不必要的趕工。</strong><br>
-        此時趕工成本 $${us.rc} 已超過間接成本每天節省的 $50，繼續趕工反而增加總成本。<br>
+        此時趕工成本 $${us.rc} 已超過間接成本每天節省的 $${INDIRECT_SLOPE}，繼續趕工反而增加總成本。<br>
         最佳策略是在第 ${roundNum} 回合前停止。
       </div>`;
     }
@@ -1131,12 +1204,12 @@ function renderComparisonTotal() {
       html += `<div class="msg msg-error">
         <strong>⚠️ 您提早停止了趕工。</strong><br>
         最佳解還會繼續第 ${userSteps.length+1} 回合：趕工 <strong>${next.acts.join(' + ')}</strong>（成本 $${next.rc}），
-        因為 $${next.rc} &lt; $50（間接成本每天節省量），仍然值得。
+        因為 $${next.rc} &lt; $${INDIRECT_SLOPE}（間接成本每天節省量），仍然值得。
       </div>`;
     } else {
       html += `<div class="msg msg-error">
         <strong>⚠️ 您多做了 ${userSteps.length - opt.steps.length} 回合趕工。</strong><br>
-        從第 ${opt.steps.length+1} 回合起，趕工成本已超過間接成本每天節省的 $50，不應該繼續。
+        從第 ${opt.steps.length+1} 回合起，趕工成本已超過間接成本每天節省的 $${INDIRECT_SLOPE}，不應該繼續。
       </div>`;
     }
   }
